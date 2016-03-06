@@ -7,11 +7,37 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var app = express();
 
+var http = require('http');
+var server = http.createServer(app);
+var io = require('socket.io').listen(server);
+
+
+server.listen(8000);
+io.set("origins", "*:*");
+
+var currentPrice = 99;
+
+io.on('connection', function (socket) {
+	socket.emit('priceUpdate',currentPrice);
+	socket.on('bid', function (data) {
+		currentPrice = parseInt(data);
+		socket.emit('priceUpdate',currentPrice);
+		socket.broadcast.emit('priceUpdate',currentPrice);
+	});
+});
+
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// make templates folder accessible to AppComponent
+app.use('/templates', express.static(__dirname + '/views/templates/'));
+
+
+// so we can use the node modules directly from scripts folder in index.html
+app.use('/scripts', express.static(__dirname + '/node_modules/'));
 
 app.use('/', routes);
 
